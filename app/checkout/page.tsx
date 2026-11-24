@@ -189,7 +189,7 @@ export default function CheckoutPage() {
         )}
 
         <form onSubmit={handleCheckout}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.3fr) minmax(320px, 0.9fr)', gap: '44px', alignItems: 'start' }}>
+          <div className="checkout-grid">
             {/* Left: Customer Info & Payment Modes */}
             <div>
               {/* Customer Information Card */}
@@ -380,7 +380,7 @@ export default function CheckoutPage() {
                       <span style={{ color: 'var(--ink)' }}>
                         {it.title} <small style={{ color: 'var(--muted)' }}>(Cl. {it.class_level})</small>
                       </span>
-                      <strong>₹{(it.price_paise / 100).toFixed(0)}</strong>
+                      <strong>₹{((it.price_paise || 0) / 100).toFixed(0)}</strong>
                     </div>
                   ))}
                 </div>

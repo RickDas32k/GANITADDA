@@ -53,10 +53,9 @@ export default function Footer() {
             <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '14px' }}>
               <li><Link href="/about">About Our Mission</Link></li>
               <li><Link href="/contact">Contact & Support</Link></li>
-              <li><Link href="/login">Student Sign In</Link></li>
+              <li><Link href="/login">Login</Link></li>
               <li><Link href="/register">Create Free Account</Link></li>
               <li><Link href="/dashboard">Student Dashboard</Link></li>
-              <li><Link href="/admin">Educator / Admin Portal</Link></li>
             </ul>
           </div>
 

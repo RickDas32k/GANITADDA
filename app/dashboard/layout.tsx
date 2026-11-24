@@ -48,7 +48,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div style={{ background: 'var(--cream)', minHeight: 'calc(100vh - 160px)', padding: '40px 0 80px' }}>
       <div className="wrap">
-        <div style={{ display: 'grid', gridTemplateColumns: '260px minmax(0, 1fr)', gap: '32px', alignItems: 'start' }}>
+        <div className="dashboard-layout-grid">
           {/* Sidebar */}
           <aside className="card" style={{ padding: '24px 16px', position: 'sticky', top: '100px' }}>
             <div style={{ padding: '0 12px 18px', borderBottom: '1px solid var(--line)', marginBottom: '16px' }}>

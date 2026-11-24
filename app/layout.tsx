@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import MobileBottomNav from '@/components/MobileBottomNav';
 import { CartProvider } from '@/context/CartContext';
 
 export const metadata: Metadata = {
@@ -45,6 +46,7 @@ export default function RootLayout({
           <Navbar />
           <div style={{ minHeight: 'calc(100vh - 350px)' }}>{children}</div>
           <Footer />
+          <MobileBottomNav />
         </CartProvider>
       </body>
     </html>

@@ -58,10 +58,10 @@ export default function LoginPage() {
               <span>GANIT</span> ADDA
             </Link>
             <h1 className="heading-serif" style={{ fontSize: '24px', margin: '6px 0 4px' }}>
-              Welcome Back
+              Login to Your Account
             </h1>
             <p style={{ color: 'var(--muted)', fontSize: '14px', margin: 0 }}>
-              Sign in to access your purchased worksheets & solutions
+              Access your purchased worksheets, study materials & solutions
             </p>
           </div>
 
@@ -129,16 +129,40 @@ export default function LoginPage() {
               type="submit"
               disabled={loading}
               className="btn btn-primary"
-              style={{ width: '100%', marginTop: '8px', padding: '13px' }}
+              style={{ width: '100%', marginTop: '8px', padding: '13px', fontSize: '15px', fontWeight: 700 }}
             >
-              {loading ? 'Signing in...' : 'Sign In'}
+              {loading ? 'Logging in...' : 'Login'}
             </button>
           </form>
 
-          <div style={{ borderTop: '1px solid var(--line)', marginTop: '24px', paddingTop: '18px', textAlign: 'center', fontSize: '14px', color: 'var(--muted)' }}>
-            Don't have an account yet?{' '}
-            <Link href="/register" style={{ color: 'var(--maroon)', fontWeight: 700 }}>
-              Create Account
+          <div
+            style={{
+              borderTop: '1px solid var(--line)',
+              marginTop: '26px',
+              paddingTop: '20px',
+              textAlign: 'center',
+            }}
+          >
+            <p style={{ fontSize: '14px', color: 'var(--muted)', marginBottom: '12px' }}>
+              Don&apos;t have an account yet?
+            </p>
+            <Link
+              href="/register"
+              className="btn btn-outline"
+              style={{
+                width: '100%',
+                padding: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 700,
+                color: 'var(--maroon)',
+                borderColor: 'var(--maroon)',
+                backgroundColor: 'rgba(128, 0, 32, 0.04)',
+                gap: '6px',
+              }}
+            >
+              Create an Account <ArrowRight size={15} />
             </Link>
           </div>
         </motion.div>

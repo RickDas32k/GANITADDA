@@ -201,9 +201,9 @@ export default function RegisterPage() {
           </form>
 
           <div style={{ borderTop: '1px solid var(--line)', marginTop: '24px', paddingTop: '18px', textAlign: 'center', fontSize: '14px', color: 'var(--muted)' }}>
-            Already registered?{' '}
+            Already have an account?{' '}
             <Link href="/login" style={{ color: 'var(--maroon)', fontWeight: 700 }}>
-              Sign In
+              Login
             </Link>
           </div>
         </motion.div>

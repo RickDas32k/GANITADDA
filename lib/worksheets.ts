@@ -22,10 +22,10 @@ export async function getWorksheets(
     let list = [...INITIAL_MOCK_WORKSHEETS];
 
     if (filters.classLevel && filters.classLevel !== 'all') {
-      list = list.filter((w) => w.class_level.toUpperCase() === filters.classLevel?.toUpperCase());
+      list = list.filter((w) => (w.class_level || '').toUpperCase() === filters.classLevel?.toUpperCase());
     }
     if (filters.difficulty && filters.difficulty !== 'all') {
-      list = list.filter((w) => w.difficulty.toLowerCase() === filters.difficulty?.toLowerCase());
+      list = list.filter((w) => (w.difficulty || '').toLowerCase() === filters.difficulty?.toLowerCase());
     }
     if (filters.materialType && filters.materialType !== 'all') {
       list = list.filter((w) => w.material_type === filters.materialType);
@@ -37,21 +37,21 @@ export async function getWorksheets(
       const q = filters.search.toLowerCase();
       list = list.filter(
         (w) =>
-          w.title.toLowerCase().includes(q) ||
-          w.chapter.toLowerCase().includes(q) ||
-          w.description.toLowerCase().includes(q) ||
-          w.topic?.toLowerCase().includes(q)
+          (w.title || '').toLowerCase().includes(q) ||
+          (w.chapter || '').toLowerCase().includes(q) ||
+          (w.description || '').toLowerCase().includes(q) ||
+          (w.topic || '').toLowerCase().includes(q)
       );
     }
 
     if (filters.sortBy === 'price_low') {
-      list.sort((a, b) => a.price_paise - b.price_paise);
+      list.sort((a, b) => (a.price_paise || 0) - (b.price_paise || 0));
     } else if (filters.sortBy === 'price_high') {
-      list.sort((a, b) => b.price_paise - a.price_paise);
+      list.sort((a, b) => (b.price_paise || 0) - (a.price_paise || 0));
     } else if (filters.sortBy === 'popular') {
-      list.sort((a, b) => b.download_count - a.download_count);
+      list.sort((a, b) => (b.download_count || 0) - (a.download_count || 0));
     } else {
-      list.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      list.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
     }
 
     if (filters.limit) {
@@ -73,10 +73,10 @@ export async function getWorksheets(
     let list = rows.length > 0 ? rows : [...INITIAL_MOCK_WORKSHEETS];
 
     if (filters.classLevel && filters.classLevel !== 'all') {
-      list = list.filter((w) => w.class_level.toUpperCase() === filters.classLevel?.toUpperCase());
+      list = list.filter((w) => (w.class_level || '').toUpperCase() === filters.classLevel?.toUpperCase());
     }
     if (filters.difficulty && filters.difficulty !== 'all') {
-      list = list.filter((w) => w.difficulty.toLowerCase() === filters.difficulty?.toLowerCase());
+      list = list.filter((w) => (w.difficulty || '').toLowerCase() === filters.difficulty?.toLowerCase());
     }
     if (filters.materialType && filters.materialType !== 'all') {
       list = list.filter((w) => w.material_type === filters.materialType);
@@ -88,19 +88,19 @@ export async function getWorksheets(
       const q = filters.search.toLowerCase();
       list = list.filter(
         (w) =>
-          w.title.toLowerCase().includes(q) ||
-          w.chapter.toLowerCase().includes(q) ||
-          w.description.toLowerCase().includes(q) ||
-          w.topic?.toLowerCase().includes(q)
+          (w.title || '').toLowerCase().includes(q) ||
+          (w.chapter || '').toLowerCase().includes(q) ||
+          (w.description || '').toLowerCase().includes(q) ||
+          (w.topic || '').toLowerCase().includes(q)
       );
     }
 
     if (filters.sortBy === 'price_low') {
-      list.sort((a, b) => a.price_paise - b.price_paise);
+      list.sort((a, b) => (a.price_paise || 0) - (b.price_paise || 0));
     } else if (filters.sortBy === 'price_high') {
-      list.sort((a, b) => b.price_paise - a.price_paise);
+      list.sort((a, b) => (b.price_paise || 0) - (a.price_paise || 0));
     } else if (filters.sortBy === 'popular') {
-      list.sort((a, b) => b.download_count - a.download_count);
+      list.sort((a, b) => (b.download_count || 0) - (a.download_count || 0));
     }
 
     if (filters.limit) {

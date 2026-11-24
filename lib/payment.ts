@@ -187,7 +187,10 @@ export function verifySignature(params: {
       .createHmac('sha256', config.razorpay.keySecret)
       .update(body)
       .digest('hex');
-    return crypto.timingSafeEqual(Buffer.from(params.signature), Buffer.from(expected));
+    const sigBuf = Buffer.from(params.signature);
+    const expBuf = Buffer.from(expected);
+    if (sigBuf.length !== expBuf.length) return false;
+    return crypto.timingSafeEqual(sigBuf, expBuf);
   }
 
   if (params.provider === 'PAYU') {

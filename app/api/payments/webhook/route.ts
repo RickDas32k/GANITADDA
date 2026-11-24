@@ -15,7 +15,9 @@ export async function POST(req: Request) {
         .update(rawBody)
         .digest('hex');
 
-      if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) {
+      const sigBuf = Buffer.from(signature);
+      const expBuf = Buffer.from(expected);
+      if (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) {
         console.error('[Webhook Error] Invalid signature');
         return NextResponse.json({ error: 'Invalid webhook signature' }, { status: 400 });
       }

@@ -38,11 +38,17 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     try {
       const stored = localStorage.getItem(CART_STORAGE_KEY);
       if (stored) {
-        setItems(JSON.parse(stored));
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          setItems(parsed);
+        }
       }
       const storedCoupon = localStorage.getItem(COUPON_STORAGE_KEY);
       if (storedCoupon) {
-        setCoupon(JSON.parse(storedCoupon));
+        const parsedCoupon = JSON.parse(storedCoupon);
+        if (parsedCoupon && typeof parsedCoupon === 'object') {
+          setCoupon(parsedCoupon);
+        }
       }
     } catch (e) {
       console.warn('Failed to load cart from localStorage', e);
@@ -60,7 +66,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }, [items, loaded]);
 
-  const subtotalPaise = items.reduce((sum, item) => sum + (item.price_paise || 0), 0);
+  const subtotalPaise = (Array.isArray(items) ? items : []).reduce(
+    (sum, item) => sum + (item?.price_paise || 0),
+    0
+  );
 
   // Re-calculate coupon discount whenever subtotal changes
   useEffect(() => {
@@ -68,20 +77,21 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       setCouponDiscountPaise(0);
       return;
     }
-    if (subtotalPaise < coupon.min_order_paise) {
+    const minOrder = Number(coupon.min_order_paise || 0);
+    if (subtotalPaise < minOrder) {
       setCouponDiscountPaise(0);
-      setCouponError(`Min order amount of ₹${(coupon.min_order_paise / 100).toFixed(0)} required`);
+      setCouponError(`Min order amount of ₹${(minOrder / 100).toFixed(0)} required`);
       return;
     }
     setCouponError(null);
     let discount = 0;
     if (coupon.discount_type === 'percentage') {
-      discount = Math.round((subtotalPaise * Number(coupon.discount_value)) / 100);
+      discount = Math.round((subtotalPaise * Number(coupon.discount_value || 0)) / 100);
       if (coupon.max_discount_paise && discount > coupon.max_discount_paise) {
         discount = coupon.max_discount_paise;
       }
     } else {
-      discount = Math.round(Number(coupon.discount_value));
+      discount = Math.round(Number(coupon.discount_value || 0));
     }
     setCouponDiscountPaise(Math.min(discount, subtotalPaise));
   }, [coupon, subtotalPaise]);
@@ -90,13 +100,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const addItem = (worksheet: Worksheet) => {
     setItems((prev) => {
-      if (prev.some((item) => item.id === worksheet.id)) return prev;
-      return [...prev, worksheet];
+      const current = Array.isArray(prev) ? prev : [];
+      if (current.some((item) => item?.id === worksheet?.id)) return current;
+      return [...current, worksheet];
     });
   };
 
   const removeItem = (worksheetId: string) => {
-    setItems((prev) => prev.filter((item) => item.id !== worksheetId));
+    setItems((prev) => (Array.isArray(prev) ? prev.filter((item) => item?.id !== worksheetId) : []));
   };
 
   const clearCart = () => {
@@ -112,7 +123,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   };
 
   const isInCart = (worksheetId: string) => {
-    return items.some((item) => item.id === worksheetId);
+    if (!Array.isArray(items)) return false;
+    return items.some((item) => item?.id === worksheetId);
   };
 
   const applyCoupon = async (code: string): Promise<boolean> => {

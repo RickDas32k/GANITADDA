@@ -20,15 +20,11 @@ export async function GET(request: Request) {
       sortBy,
     });
 
-    return NextResponse.json({
-      success: true,
-      data: worksheets,
-      total: worksheets.length,
-    });
+    return NextResponse.json(worksheets);
   } catch (e: any) {
     console.error('Worksheets API error:', e);
     return NextResponse.json(
-      { success: false, error: 'Unable to load worksheets catalog.' },
+      { error: 'Unable to load worksheets catalog.' },
       { status: 500 }
     );
   }

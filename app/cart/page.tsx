@@ -76,7 +76,7 @@ export default function CartPage() {
           </h1>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.4fr) minmax(320px, 0.85fr)', gap: '40px', alignItems: 'start' }}>
+        <div className="cart-grid">
           {/* Cart Items List */}
           <div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '24px' }}>
@@ -109,7 +109,7 @@ export default function CartPage() {
 
                     <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
                       <div style={{ fontSize: '20px', fontWeight: 800, color: 'var(--maroon)' }}>
-                        {item.price_paise === 0 ? 'FREE' : `₹${(item.price_paise / 100).toFixed(0)}`}
+                        {(item.price_paise || 0) === 0 ? 'FREE' : `₹${((item.price_paise || 0) / 100).toFixed(0)}`}
                       </div>
                       <button
                         onClick={() => removeItem(item.id)}

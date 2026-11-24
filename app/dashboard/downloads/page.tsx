@@ -13,10 +13,11 @@ export default function DownloadsPage() {
     fetch('/api/customer/entitlements')
       .then((res) => (res.ok ? res.json() : []))
       .then((data) => {
-        setEntitlements(data);
+        setEntitlements(Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : []));
         setLoading(false);
       })
       .catch(() => {
+        setEntitlements([]);
         setLoading(false);
       });
   }, []);

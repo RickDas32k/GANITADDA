@@ -4,14 +4,47 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
-import { ShoppingBag, User as UserIcon, Menu, X, ArrowRight, ShieldCheck } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import {
+  ShoppingBag,
+  User as UserIcon,
+  Menu,
+  X,
+  ArrowRight,
+  ShieldCheck,
+  BookOpen,
+  FileText,
+  Sparkles,
+  Phone,
+  Tag,
+  Copy,
+  Check,
+} from 'lucide-react';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { springSmooth, springSnappy, easeOutUI, CouponCopyButton } from './animations/MotionWrappers';
 
 export default function Navbar() {
   const pathname = usePathname();
   const { itemCount } = useCart();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [user, setUser] = useState<{ full_name: string; role: string } | null>(null);
+  const shouldReduceMotion = useReducedMotion();
+
+  // Close mobile menu whenever pathname changes
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [pathname]);
+
+  // Lock body scroll when mobile menu is open
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [mobileMenuOpen]);
 
   useEffect(() => {
     // Check auth status
@@ -37,65 +70,72 @@ export default function Navbar() {
 
   return (
     <>
+      {/* Top Promotional Announcement Strip */}
       <div className="topbar">
-        <div className="wrap">
-          <span>CBSE & NCERT Mathematics • Classes VI–XII • Expert Worksheets & Step-by-Step Solutions</span>
+        <div className="wrap topbar-inner">
+          <span className="topbar-desktop-text">
+            🎉 <strong>FLAT 20% OFF</strong> on all CBSE & NCERT Worksheets! Use Code:
+          </span>
+          <span className="topbar-mobile-text">
+            🎉 <strong>20% OFF:</strong>
+          </span>
+          <CouponCopyButton code="WELCOME20" />
+          <span className="topbar-desktop-note">
+            • Classes VI–XII • Instant Printable PDF Downloads
+          </span>
         </div>
       </div>
 
+      {/* Main Sticky Navbar */}
       <header className="navbar">
         <div className="wrap nav-container">
-          {/* Logo */}
-          <Link href="/" className="brand">
+          {/* Brand Logo */}
+          <Link href="/" className="brand" aria-label="Ganit Adda Home">
             <span>GANIT</span> ADDA
             <span className="brand-badge">CBSE/NCERT</span>
           </Link>
 
-          {/* Desktop Navigation */}
-          <nav className="nav-links" aria-label="Main Navigation">
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`nav-link ${pathname === link.href ? 'active' : ''}`}
-              >
-                {link.label}
-              </Link>
-            ))}
+          {/* Desktop Navigation Links (Hidden on mobile via CSS) */}
+          <nav className="nav-links desktop-only" aria-label="Main Navigation">
+            {navLinks.map((link) => {
+              const isActive = pathname === link.href;
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={`nav-link ${isActive ? 'active' : ''}`}
+                >
+                  {link.label}
+                  {isActive && (
+                    <motion.div
+                      layoutId={shouldReduceMotion ? undefined : 'activeNavIndicator'}
+                      className="nav-active-pill"
+                      transition={springSnappy}
+                    />
+                  )}
+                </Link>
+              );
+            })}
           </nav>
 
-          {/* Actions: Cart & Auth */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          {/* Actions: Cart & Auth & Mobile Toggle */}
+          <div className="nav-actions">
             {/* Shopping Cart Button */}
             <Link
               href="/cart"
-              className="btn btn-ghost"
-              style={{ position: 'relative', padding: '10px 14px' }}
-              aria-label="Shopping Cart"
+              className="btn btn-ghost cart-btn"
+              aria-label={`Shopping Cart with ${itemCount} items`}
             >
-              <ShoppingBag size={21} color="#651b32" />
+              <ShoppingBag size={21} color="var(--maroon)" />
               <AnimatePresence>
                 {itemCount > 0 && (
                   <motion.span
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    exit={{ scale: 0 }}
-                    style={{
-                      position: 'absolute',
-                      top: '2px',
-                      right: '4px',
-                      background: '#c69a45',
-                      color: '#281b1f',
-                      fontSize: '11px',
-                      fontWeight: 800,
-                      borderRadius: '999px',
-                      minWidth: '19px',
-                      height: '19px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      padding: '0 4px',
-                    }}
+                    key="badge"
+                    initial={{ scale: 0.6, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0.6, opacity: 0 }}
+                    transition={springSnappy}
+                    className="cart-badge"
                   >
                     {itemCount}
                   </motion.span>
@@ -103,96 +143,132 @@ export default function Navbar() {
               </AnimatePresence>
             </Link>
 
-            {/* User Account / Login Button */}
-            {user ? (
-              <Link
-                href={user.role === 'ADMIN' ? '/admin' : '/dashboard'}
-                className="btn btn-outline btn-sm"
-              >
-                {user.role === 'ADMIN' ? (
-                  <>
-                    <ShieldCheck size={16} /> Admin Portal
-                  </>
-                ) : (
-                  <>
-                    <UserIcon size={16} /> My Account
-                  </>
-                )}
-              </Link>
-            ) : (
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <Link href="/login" className="btn btn-ghost btn-sm">
-                  Sign In
+            {/* User Account / Login Button (Desktop) */}
+            <div className="desktop-only">
+              {user ? (
+                <Link
+                  href="/dashboard"
+                  className="btn btn-outline btn-sm"
+                >
+                  <UserIcon size={16} /> My Account
                 </Link>
-                <Link href="/register" className="btn btn-primary btn-sm">
-                  Get Started
+              ) : (
+                <Link href="/login" className="btn btn-primary btn-sm" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                  <UserIcon size={15} /> Login
                 </Link>
-              </div>
-            )}
+              )}
+            </div>
 
-            {/* Mobile Hamburger Toggle */}
-            <button
-              className="btn btn-ghost"
-              style={{ padding: '8px', display: 'none' }}
+            {/* Mobile Hamburger Toggle Button (Visible on mobile, hidden on desktop) */}
+            <motion.button
+              whileTap={{ scale: 0.92 }}
+              className="mobile-hamburger-btn mobile-only"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              aria-label="Toggle Navigation Menu"
+              aria-label={mobileMenuOpen ? 'Close Navigation Menu' : 'Open Navigation Menu'}
+              aria-expanded={mobileMenuOpen}
             >
-              {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-            </button>
+              {mobileMenuOpen ? <X size={26} color="var(--maroon)" /> : <Menu size={26} color="var(--maroon)" />}
+            </motion.button>
           </div>
         </div>
 
-        {/* Mobile Slide-down Menu */}
+        {/* Mobile Slide-down Drawer / Sheet */}
         <AnimatePresence>
           {mobileMenuOpen && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-              style={{
-                background: '#fffdf8',
-                borderBottom: '1px solid var(--line)',
-                overflow: 'hidden',
-                padding: '16px 20px',
-              }}
-            >
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {navLinks.map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    onClick={() => setMobileMenuOpen(false)}
-                    style={{
-                      padding: '10px 0',
-                      fontWeight: 600,
-                      color: pathname === link.href ? 'var(--maroon)' : 'var(--ink)',
-                      borderBottom: '1px solid #f4ede4',
-                    }}
-                  >
-                    {link.label}
-                  </Link>
-                ))}
-                <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
+            <>
+              {/* Backdrop */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="mobile-menu-backdrop"
+                onClick={() => setMobileMenuOpen(false)}
+                aria-hidden="true"
+              />
+
+              {/* Drawer Container */}
+              <motion.div
+                initial={shouldReduceMotion ? { opacity: 0 } : { height: 0, opacity: 0 }}
+                animate={shouldReduceMotion ? { opacity: 1 } : { height: 'auto', opacity: 1 }}
+                exit={shouldReduceMotion ? { opacity: 0 } : { height: 0, opacity: 0 }}
+                transition={{ duration: 0.26, ease: easeOutUI }}
+                className="mobile-menu-drawer"
+              >
+                {/* Promo Code Box in Drawer */}
+                <div className="mobile-drawer-promo">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Tag size={16} color="var(--gold-dark)" />
+                    <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--maroon)' }}>
+                      FLAT 20% OFF: Use code <strong>WELCOME20</strong>
+                    </span>
+                  </div>
+                  <CouponCopyButton code="WELCOME20" />
+                </div>
+
+                {/* Primary Content Links */}
+                <div className="mobile-drawer-nav-group">
+                  <div className="mobile-drawer-label">Curriculum & Resources</div>
+                  {navLinks.map((link) => (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={`mobile-drawer-link ${pathname === link.href ? 'active' : ''}`}
+                    >
+                      <span>{link.label}</span>
+                      <ArrowRight size={16} color="var(--muted-light)" />
+                    </Link>
+                  ))}
+                </div>
+
+                {/* Account & Cart Quick Actions */}
+                <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   <Link
                     href="/cart"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="btn btn-outline btn-sm"
-                    style={{ flex: 1 }}
+                    className="btn btn-outline"
+                    style={{ width: '100%', justifyContent: 'space-between', padding: '12px 18px' }}
                   >
-                    Cart ({itemCount})
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <ShoppingBag size={18} /> View Cart
+                    </span>
+                    <span className="badge badge-gold">{itemCount} items</span>
                   </Link>
-                  <Link
-                    href={user ? '/dashboard' : '/login'}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="btn btn-primary btn-sm"
-                    style={{ flex: 1 }}
+
+                  {user ? (
+                    <Link
+                      href="/dashboard"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="btn btn-primary"
+                      style={{ width: '100%', padding: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                    >
+                      <UserIcon size={16} /> My Account
+                    </Link>
+                  ) : (
+                    <Link
+                      href="/login"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="btn btn-primary"
+                      style={{ width: '100%', padding: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                    >
+                      <UserIcon size={16} /> Login
+                    </Link>
+                  )}
+
+                  {/* Direct WhatsApp Callout */}
+                  <a
+                    href="https://wa.me/919874169625"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="btn btn-ghost"
+                    style={{ fontSize: '13px', color: 'var(--muted)', marginTop: '6px' }}
                   >
-                    {user ? 'My Dashboard' : 'Sign In'}
-                  </Link>
+                    <Phone size={14} color="var(--gold-dark)" /> Need WhatsApp support? +91 98741 69625
+                  </a>
                 </div>
-              </div>
-            </motion.div>
+              </motion.div>
+            </>
           )}
         </AnimatePresence>
       </header>

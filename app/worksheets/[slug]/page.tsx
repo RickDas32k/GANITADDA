@@ -66,7 +66,7 @@ export default async function WorksheetDetailsPage({
         </div>
 
         {/* Product Details Grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.35fr) minmax(320px, 0.95fr)', gap: '48px', alignItems: 'start' }}>
+        <div className="product-details-grid">
           {/* Left Column: Product Information & Syllabus */}
           <div>
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '14px' }}>
@@ -125,7 +125,7 @@ export default async function WorksheetDetailsPage({
             )}
 
             {/* Topics Covered */}
-            {worksheet.topic && (
+            {typeof worksheet.topic === 'string' && worksheet.topic.trim() && (
               <div style={{ marginBottom: '32px' }}>
                 <h3 style={{ color: 'var(--maroon)', fontSize: '18px', marginBottom: '10px' }}>
                   Specific Topics Covered
@@ -189,18 +189,18 @@ export default async function WorksheetDetailsPage({
             <div className="card" style={{ padding: '32px', boxShadow: 'var(--shadow-md)' }}>
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '18px' }}>
                 <div>
-                  {worksheet.is_free || worksheet.price_paise === 0 ? (
+                  {worksheet.is_free || (worksheet.price_paise || 0) === 0 ? (
                     <span style={{ fontSize: '32px', fontWeight: 800, color: 'var(--success)' }}>
                       FREE
                     </span>
                   ) : (
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px' }}>
                       <span style={{ fontSize: '36px', fontWeight: 800, color: 'var(--maroon)' }}>
-                        ₹{(worksheet.price_paise / 100).toFixed(0)}
+                        ₹{((worksheet.price_paise || 0) / 100).toFixed(0)}
                       </span>
-                      {worksheet.original_price_paise && worksheet.original_price_paise > worksheet.price_paise && (
+                      {worksheet.original_price_paise && worksheet.original_price_paise > (worksheet.price_paise || 0) && (
                         <span style={{ fontSize: '18px', color: 'var(--muted-light)', textDecoration: 'line-through' }}>
-                          ₹{(worksheet.original_price_paise / 100).toFixed(0)}
+                          ₹{((worksheet.original_price_paise || 0) / 100).toFixed(0)}
                         </span>
                       )}
                     </div>

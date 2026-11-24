@@ -20,48 +20,52 @@ export default function WorksheetsMarketplacePage() {
     fetch('/api/worksheets')
       .then((res) => (res.ok ? res.json() : []))
       .then((data) => {
-        setWorksheets(data);
+        const list = Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : []);
+        setWorksheets(list);
         setLoading(false);
       })
       .catch((err) => {
         console.error('Failed to load worksheets', err);
+        setWorksheets([]);
         setLoading(false);
       });
   }, []);
 
   const filtered = useMemo(() => {
+    if (!Array.isArray(worksheets)) return [];
     return worksheets
       .filter((w) => {
-        if (selectedClass !== 'all' && w.class_level.toUpperCase() !== selectedClass.toUpperCase()) {
+        if (!w) return false;
+        if (selectedClass !== 'all' && (w.class_level || '').toUpperCase() !== selectedClass.toUpperCase()) {
           return false;
         }
-        if (selectedDifficulty !== 'all' && w.difficulty.toLowerCase() !== selectedDifficulty.toLowerCase()) {
+        if (selectedDifficulty !== 'all' && (w.difficulty || '').toLowerCase() !== selectedDifficulty.toLowerCase()) {
           return false;
         }
         if (selectedType !== 'all' && w.material_type !== selectedType) {
           return false;
         }
-        if (priceFilter === 'free' && (!w.is_free && w.price_paise > 0)) {
+        if (priceFilter === 'free' && (!w.is_free && (w.price_paise || 0) > 0)) {
           return false;
         }
-        if (priceFilter === 'paid' && (w.is_free || w.price_paise === 0)) {
+        if (priceFilter === 'paid' && (w.is_free || (w.price_paise || 0) === 0)) {
           return false;
         }
         if (search.trim()) {
           const q = search.toLowerCase();
-          const matchTitle = w.title.toLowerCase().includes(q);
-          const matchChapter = w.chapter.toLowerCase().includes(q);
-          const matchDesc = w.description.toLowerCase().includes(q);
-          const matchTopic = w.topic?.toLowerCase().includes(q);
+          const matchTitle = (w.title || '').toLowerCase().includes(q);
+          const matchChapter = (w.chapter || '').toLowerCase().includes(q);
+          const matchDesc = (w.description || '').toLowerCase().includes(q);
+          const matchTopic = (w.topic || '').toLowerCase().includes(q);
           return matchTitle || matchChapter || matchDesc || matchTopic;
         }
         return true;
       })
       .sort((a, b) => {
-        if (sortBy === 'price_low') return a.price_paise - b.price_paise;
-        if (sortBy === 'price_high') return b.price_paise - a.price_paise;
+        if (sortBy === 'price_low') return (a.price_paise || 0) - (b.price_paise || 0);
+        if (sortBy === 'price_high') return (b.price_paise || 0) - (a.price_paise || 0);
         if (sortBy === 'popular') return (b.download_count || 0) - (a.download_count || 0);
-        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
       });
   }, [worksheets, search, selectedClass, selectedDifficulty, selectedType, priceFilter, sortBy]);
 
