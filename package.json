@@ -11,6 +11,8 @@
     "admin:hash": "node scripts/hash-password.mjs"
   },
   "dependencies": {
+    "@neon/config": "^1.14.8",
+    "@neon/env": "^2.1.11",
     "@neondatabase/serverless": "^1.0.2",
     "@vercel/blob": "^2.0.0",
     "bcryptjs": "^3.0.2",
