@@ -123,6 +123,24 @@ export default function CheckoutPage() {
         }
       }
 
+      // PayU hosted checkout: hand the browser to PayU with a signed form POST.
+      // Cart is cleared on the success page, not here, so a cancelled payment keeps the cart.
+      if (orderData.provider === 'PAYU' && orderData.actionUrl && orderData.payuParams) {
+        const f = document.createElement('form');
+        f.method = 'POST';
+        f.action = orderData.actionUrl;
+        Object.entries(orderData.payuParams as Record<string, string>).forEach(([k, v]) => {
+          const i = document.createElement('input');
+          i.type = 'hidden';
+          i.name = k;
+          i.value = String(v);
+          f.appendChild(i);
+        });
+        document.body.appendChild(f);
+        f.submit();
+        return;
+      }
+
       // If live Razorpay checkout:
       if (orderData.provider === 'RAZORPAY' && typeof window !== 'undefined' && (window as any).Razorpay) {
         const rzp = new (window as any).Razorpay({

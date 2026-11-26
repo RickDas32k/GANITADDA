@@ -6,11 +6,13 @@ import { useSearchParams } from 'next/navigation';
 import confetti from 'canvas-confetti';
 import { CheckCircle2, Download, ShieldCheck } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useCart } from '@/context/CartContext';
 
 function SuccessContent() {
   const searchParams = useSearchParams();
   const orderId = searchParams.get('orderId');
   const [order, setOrder] = useState<any>(null);
+  const { clearCart } = useCart();
 
   useEffect(() => {
     // Fire celebratory confetti burst
@@ -24,6 +26,7 @@ function SuccessContent() {
     } catch {}
 
     if (orderId) {
+      clearCart();
       fetch(`/api/payments/status/${orderId}`)
         .then((res) => (res.ok ? res.json() : null))
         .then((data) => {

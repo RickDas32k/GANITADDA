@@ -11,54 +11,46 @@ import { springSnappy } from './animations/MotionWrappers';
 export default function MobileBottomNav() {
   const pathname = usePathname();
   const { itemCount } = useCart();
-  const shouldReduceMotion = useReducedMotion();
+  const reduce = useReducedMotion();
 
-  // If on admin portal, we don't show consumer bottom nav
-  if (pathname.startsWith('/admin')) {
-    return null;
-  }
+  // Consumer-only chrome; the admin console has its own layout
+  if (pathname.startsWith('/admin')) return null;
 
   const items = [
     { label: 'Home', href: '/', icon: Home, exact: true },
     { label: 'Worksheets', href: '/worksheets', icon: BookOpen },
     { label: 'NCERT', href: '/ncert-solutions', icon: GraduationCap },
-    { label: 'Cart', href: '/cart', icon: ShoppingBag, badge: itemCount },
+    { label: 'Cart', href: '/cart', icon: ShoppingBag, badge: itemCount, match: ['/cart', '/checkout'] },
     { label: 'Account', href: '/dashboard', icon: User, match: ['/dashboard', '/login', '/register'] },
   ];
 
   return (
-    <nav className="mobile-bottom-nav" aria-label="Mobile Bottom Navigation">
+    <nav className="mobile-bottom-nav" aria-label="Mobile bottom navigation">
       <div className="mobile-bottom-nav-inner">
         {items.map((it) => {
-          const isActive = it.exact
+          const active = it.exact
             ? pathname === it.href
-            : it.match
-            ? it.match.some((p) => pathname.startsWith(p))
-            : pathname.startsWith(it.href);
-
-          const IconComponent = it.icon;
+            : (it.match ?? [it.href]).some((p) => pathname === p || pathname.startsWith(p + '/'));
+          const Icon = it.icon;
 
           return (
             <Link
               key={it.label}
               href={it.href}
-              className={`mobile-bottom-nav-item ${isActive ? 'active' : ''}`}
-              aria-label={it.label}
+              className={`mobile-bottom-nav-item ${active ? 'active' : ''}`}
+              aria-current={active ? 'page' : undefined}
             >
-              {isActive && (
-                <motion.div
-                  layoutId={shouldReduceMotion ? undefined : 'bottomNavActiveIndicator'}
+              {active && (
+                <motion.span
+                  layoutId={reduce ? undefined : 'bottomNavActiveIndicator'}
                   className="mobile-bottom-active-indicator"
                   transition={springSnappy}
                 />
               )}
-              <motion.div
-                whileTap={{ scale: 0.9 }}
-                className="mobile-bottom-icon-wrap"
-              >
-                <IconComponent size={20} strokeWidth={isActive ? 2.4 : 1.8} />
-                {it.badge && it.badge > 0 ? (
-                  <AnimatePresence>
+              <span className="mobile-bottom-icon-wrap">
+                <Icon size={21} strokeWidth={active ? 2.3 : 1.8} />
+                <AnimatePresence>
+                  {it.badge && it.badge > 0 ? (
                     <motion.span
                       key="badge"
                       initial={{ scale: 0.6, opacity: 0 }}
@@ -69,9 +61,9 @@ export default function MobileBottomNav() {
                     >
                       {it.badge}
                     </motion.span>
-                  </AnimatePresence>
-                ) : null}
-              </motion.div>
+                  ) : null}
+                </AnimatePresence>
+              </span>
               <span className="mobile-bottom-label">{it.label}</span>
             </Link>
           );

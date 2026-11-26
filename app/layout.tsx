@@ -1,9 +1,16 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import MobileBottomNav from '@/components/MobileBottomNav';
 import { CartProvider } from '@/context/CartContext';
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover', // lets env(safe-area-inset-*) work on notched phones
+  themeColor: '#3e1022',
+};
 
 export const metadata: Metadata = {
   title: 'GANIT ADDA | Premium CBSE & NCERT Mathematics Worksheets & Solutions',
@@ -39,12 +46,18 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <link rel="icon" href="/favicon.ico" sizes="any" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap"
+        />
       </head>
       <body>
         <CartProvider>
+          <a href="#content" className="skip-link">Skip to content</a>
           <Navbar />
-          <div style={{ minHeight: 'calc(100vh - 350px)' }}>{children}</div>
+          <div id="content" style={{ minHeight: 'calc(100vh - 350px)' }}>{children}</div>
           <Footer />
           <MobileBottomNav />
         </CartProvider>

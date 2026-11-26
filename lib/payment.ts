@@ -49,16 +49,22 @@ export function getPaymentConfig() {
   );
   const isPayUConfigured = Boolean(payuKey && payuSalt);
 
-  // If live credentials not provided, operate in clean, labelled sandbox mode
-  const effectiveProvider = isRazorpayConfigured
-    ? 'RAZORPAY'
-    : isPayUConfigured
-    ? 'PAYU'
-    : 'MANUAL_TEST';
+  // Honour PAYMENT_PROVIDER when that gateway is fully configured; otherwise fall back
+  // to whichever live gateway is configured; otherwise clean, labelled sandbox mode.
+  let effectiveProvider: 'RAZORPAY' | 'PAYU' | 'MANUAL_TEST' = 'MANUAL_TEST';
+  if (provider === 'PAYU' && isPayUConfigured) effectiveProvider = 'PAYU';
+  else if (provider === 'RAZORPAY' && isRazorpayConfigured) effectiveProvider = 'RAZORPAY';
+  else if (isPayUConfigured && provider !== 'RAZORPAY') effectiveProvider = 'PAYU';
+  else if (isRazorpayConfigured) effectiveProvider = 'RAZORPAY';
+  else if (isPayUConfigured) effectiveProvider = 'PAYU';
+
+  // PayU environment: TEST posts to test.payu.in, LIVE to secure.payu.in.
+  // Defaults to TEST so a missing variable can never charge real cards by accident.
+  const payuEnv = (process.env.PAYU_ENV || 'TEST').toUpperCase() === 'LIVE' ? 'LIVE' : 'TEST';
 
   return {
     provider: effectiveProvider,
-    isTestMode: !isRazorpayConfigured && !isPayUConfigured,
+    isTestMode: effectiveProvider === 'MANUAL_TEST',
     razorpay: {
       keyId: razorpayKey || 'rzp_test_sandbox_ganitadda',
       keySecret: razorpaySecret,
@@ -67,7 +73,76 @@ export function getPaymentConfig() {
     payu: {
       key: payuKey,
       salt: payuSalt,
+      env: payuEnv as 'TEST' | 'LIVE',
+      actionUrl: payuEnv === 'LIVE' ? 'https://secure.payu.in/_payment' : 'https://test.payu.in/_payment',
     },
+  };
+}
+
+/** Public origin used for PayU's surl/furl redirects (must be absolute https). */
+export function getSiteUrl(): string {
+  const explicit = process.env.NEXT_PUBLIC_SITE_URL;
+  if (explicit && !explicit.includes('localhost')) return explicit.replace(/\/$/, '');
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
+  return (explicit || 'http://localhost:3000').replace(/\/$/, '');
+}
+
+/** PayU forward hash: key|txnid|amount|productinfo|firstname|email|udf1..udf5||||||SALT */
+export function payuRequestHash(f: {
+  key: string; txnid: string; amount: string; productinfo: string; firstname: string; email: string;
+  udf1?: string; udf2?: string; udf3?: string; udf4?: string; udf5?: string; salt: string;
+}) {
+  const str = [
+    f.key, f.txnid, f.amount, f.productinfo, f.firstname, f.email,
+    f.udf1 || '', f.udf2 || '', f.udf3 || '', f.udf4 || '', f.udf5 || '',
+    '', '', '', '', '', f.salt,
+  ].join('|');
+  return crypto.createHash('sha512').update(str).digest('hex');
+}
+
+export interface PayuVerifyResult {
+  valid: boolean;
+  success: boolean;
+  status: string;
+  orderId: string;
+  txnid: string;
+  mihpayid: string;
+  mode: string;
+  amountPaise: number;
+  reason?: string;
+}
+
+/**
+ * Verify a PayU response (surl/furl redirect or webhook) with the reverse hash:
+ * [additionalCharges|]SALT|status||||||udf5|udf4|udf3|udf2|udf1|email|firstname|productinfo|amount|txnid|key
+ */
+export function verifyPayuResponse(f: Record<string, string>): PayuVerifyResult {
+  const config = getPaymentConfig();
+  const base = {
+    valid: false, success: false, status: String(f.status || ''), orderId: String(f.udf1 || ''),
+    txnid: String(f.txnid || ''), mihpayid: String(f.mihpayid || ''), mode: String(f.mode || ''),
+    amountPaise: Math.round(parseFloat(f.amount || '0') * 100),
+  };
+  if (!config.payu.salt || !config.payu.key) return { ...base, reason: 'PayU not configured' };
+  if (!f.hash) return { ...base, reason: 'Missing hash' };
+  if (f.key && f.key !== config.payu.key) return { ...base, reason: 'Merchant key mismatch' };
+
+  const parts = [
+    config.payu.salt, f.status || '', '', '', '', '', '',
+    f.udf5 || '', f.udf4 || '', f.udf3 || '', f.udf2 || '', f.udf1 || '',
+    f.email || '', f.firstname || '', f.productinfo || '', f.amount || '', f.txnid || '', f.key || config.payu.key,
+  ];
+  if (f.additionalCharges) parts.unshift(f.additionalCharges);
+  const expected = crypto.createHash('sha512').update(parts.join('|')).digest('hex');
+
+  const a = Buffer.from(expected.toLowerCase());
+  const b = Buffer.from(String(f.hash).trim().toLowerCase());
+  const valid = a.length === b.length && crypto.timingSafeEqual(a, b);
+  return {
+    ...base,
+    valid,
+    success: valid && String(f.status).toLowerCase() === 'success',
+    reason: valid ? undefined : 'Hash mismatch',
   };
 }
 
@@ -78,6 +153,18 @@ export async function createGatewayOrder(
   params: CreatePaymentParams
 ): Promise<PaymentGatewayOrderResult> {
   const config = getPaymentConfig();
+
+  // Zero-value orders (100% coupon / free worksheets) never go to a gateway
+  if (params.amountPaise === 0) {
+    return {
+      provider: 'MANUAL_TEST',
+      gatewayOrderId: `order_free_${Date.now()}`,
+      amountPaise: 0,
+      currency: 'INR',
+      keyId: 'free_order',
+      isTestMode: true,
+    };
+  }
 
   if (config.provider === 'RAZORPAY' && !config.isTestMode) {
     // Official Razorpay Orders API
@@ -120,12 +207,17 @@ export async function createGatewayOrder(
   }
 
   if (config.provider === 'PAYU' && !config.isTestMode) {
-    // Official PayU Hosted Checkout hash calculation
-    const txnid = `TXN_${params.orderNumber}_${Date.now()}`;
+    const txnid = `TXN${Date.now()}${Math.floor(Math.random() * 1000)}`.slice(0, 25); // PayU: max 25 chars, alphanumeric
     const amountStr = (params.amountPaise / 100).toFixed(2);
-    const productInfo = 'Ganit Adda Mathematics Worksheets';
-    const hashString = `${config.payu.key}|${txnid}|${amountStr}|${productInfo}|${params.customerName}|${params.customerEmail}|||||||||||${config.payu.salt}`;
-    const hash = crypto.createHash('sha512').update(hashString).digest('hex');
+    const productInfo = 'Ganit Adda Worksheets';
+    const firstname = (params.customerName || 'Student').replace(/[^A-Za-z0-9 ]/g, '').trim().slice(0, 60) || 'Student';
+    const email = params.customerEmail;
+    const phone = (params.customerPhone || '').replace(/\D/g, '').slice(-10) || '9874169625';
+    const site = getSiteUrl();
+    const hash = payuRequestHash({
+      key: config.payu.key, txnid, amount: amountStr, productinfo: productInfo, firstname, email,
+      udf1: params.orderId, salt: config.payu.salt,
+    });
 
     return {
       provider: 'PAYU',
@@ -134,17 +226,18 @@ export async function createGatewayOrder(
       currency: 'INR',
       keyId: config.payu.key,
       isTestMode: false,
-      actionUrl: 'https://secure.payu.in/_payment',
+      actionUrl: config.payu.actionUrl,
       payuParams: {
         key: config.payu.key,
         txnid,
         amount: amountStr,
         productinfo: productInfo,
-        firstname: params.customerName,
-        email: params.customerEmail,
-        phone: params.customerPhone || '9874169625',
-        surl: `${process.env.NEXT_PUBLIC_SITE_URL || ''}/api/payments/payu-callback?status=success`,
-        furl: `${process.env.NEXT_PUBLIC_SITE_URL || ''}/api/payments/payu-callback?status=failed`,
+        firstname,
+        email,
+        phone,
+        udf1: params.orderId, // our order id comes back to us in the callback
+        surl: `${site}/api/payments/payu-callback`,
+        furl: `${site}/api/payments/payu-callback`,
         hash,
       },
     };
@@ -176,8 +269,9 @@ export function verifySignature(params: {
   const config = getPaymentConfig();
 
   if (params.provider === 'MANUAL_TEST') {
-    // Sandbox test mode accepts test signatures starting with test_
-    return Boolean(params.gatewayPaymentId);
+    // Sandbox only. When a live gateway is configured this must never pass;
+    // the verify route separately allows genuinely free (total = 0) orders.
+    return config.isTestMode && Boolean(params.gatewayPaymentId);
   }
 
   if (params.provider === 'RAZORPAY') {
@@ -194,9 +288,9 @@ export function verifySignature(params: {
   }
 
   if (params.provider === 'PAYU') {
-    if (!config.payu.salt || !params.signature) return false;
-    // PayU reverse hash verification
-    return true;
+    // PayU is confirmed server-to-server (payu-callback / payu-webhook via verifyPayuResponse).
+    // A browser-supplied "signature" is never trusted.
+    return false;
   }
 
   return false;
@@ -324,4 +418,51 @@ export async function fulfillOrder(params: {
     console.error('[Order Fulfillment Exception]', err);
     return { success: false, error: err?.message || 'Database fulfillment failure' };
   }
+}
+
+/**
+ * Shared handler for PayU responses (browser redirect to surl/furl AND server webhook).
+ * Verifies the reverse hash, then fulfils idempotently. Never trusts the browser.
+ */
+export async function handlePayuResponse(
+  fields: Record<string, string>,
+  source: 'CALLBACK' | 'WEBHOOK'
+): Promise<{ ok: boolean; orderId: string; fulfilled: boolean; reason?: string }> {
+  const v = verifyPayuResponse(fields);
+
+  // Keep an audit trail of every PayU message (best effort)
+  if (isDbConfigured()) {
+    try {
+      const sql = sqlClient();
+      await sql`
+        INSERT INTO payment_webhook_events (provider, event_id, event_type, payload, signature, is_processed)
+        VALUES ('PAYU', ${`${v.txnid || 'unknown'}_${source}_${Date.now()}`}, ${`${source}:${v.status || 'unknown'}`},
+                ${JSON.stringify({ ...fields, hash: undefined })}, ${fields.hash || null}, ${v.valid})
+      `;
+    } catch (e) {
+      console.error('[PayU] could not record event', e);
+    }
+  }
+
+  if (!v.valid) {
+    console.error('[PayU] rejected response:', v.reason, v.txnid);
+    return { ok: false, orderId: v.orderId, fulfilled: false, reason: v.reason };
+  }
+  if (!v.success) {
+    return { ok: true, orderId: v.orderId, fulfilled: false, reason: `Payment ${v.status || 'failed'}` };
+  }
+  if (!v.orderId) {
+    return { ok: false, orderId: '', fulfilled: false, reason: 'Missing order reference (udf1)' };
+  }
+
+  const res = await fulfillOrder({
+    orderId: v.orderId,
+    gatewayOrderId: v.txnid,
+    gatewayPaymentId: v.mihpayid,
+    provider: 'PAYU',
+    paymentMethod: v.mode || undefined,
+    amountPaise: v.amountPaise,
+    rawPayload: { ...fields, hash: undefined },
+  });
+  return { ok: res.success, orderId: v.orderId, fulfilled: res.success, reason: res.error };
 }
